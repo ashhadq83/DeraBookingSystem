@@ -1,0 +1,2135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dera Banquet Hall – Quote Generator (with smart discount)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9963A;
+    --gold-light: #E8C47A;
+    --dark: #1A1A2E;
+    --dark2: #16213E;
+    --dark3: #0F3460;
+    --cream: #FAF6EF;
+    --cream2: #F0E8D8;
+    --text: #2D2D2D;
+    --muted: #7A7A8A;
+    --border: #E2D9CC;
+    --green: #2E7D52;
+    --red: #C0392B;
+    --white: #FFFFFF;
+    --shadow: 0 4px 24px rgba(0,0,0,0.10);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    background: var(--dark);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .nav-logo {
+    width: 36px; height: 36px;
+    background: var(--gold);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 18px; font-weight: 700; color: var(--dark);
+  }
+  .nav-title {
+    font-family: 'Playfair Display', serif;
+    color: var(--white);
+    font-size: 18px;
+    letter-spacing: 0.3px;
+  }
+  .nav-title span { color: var(--gold-light); }
+  .nav-tabs {
+    display: flex; gap: 4px;
+  }
+  .nav-tab {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.55);
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .nav-tab:hover { background: rgba(255,255,255,0.08); color: var(--white); }
+  .nav-tab.active { background: var(--gold); color: var(--dark); font-weight: 600; }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── QUOTE PAGE ── */
+  .quote-layout {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 28px 32px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--cream2);
+  }
+  .card-header-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    color: var(--dark);
+    font-weight: 600;
+  }
+  .card-subtitle { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+  /* ── FORM GRID ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.wide { grid-column: span 2; }
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+  }
+  input, select, textarea {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--cream);
+    color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,150,58,0.12);
+    background: var(--white);
+  }
+#initial-due-date, #balance-due-date {
+  font-family: 'Playfair Display', serif;
+  letter-spacing: 0.3px;
+}
+
+  /* ── QUOTE # ROW ── */
+  .quote-meta-row {
+    display: flex; gap: 16px; align-items: flex-end;
+    margin-bottom: 8px;
+  }
+  .quote-meta-row .form-group { flex: 1; margin: 0; }
+
+  /* ── ITEMS TABLE ── */
+  .items-header {
+    display: grid;
+    grid-template-columns: 2fr 110px 90px 80px 110px 36px;
+    gap: 8px;
+    padding: 0 8px 10px 8px;
+    border-bottom: 2px solid var(--cream2);
+    margin-bottom: 6px;
+  }
+  .items-header span {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+  }
+  .item-row {
+    display: grid;
+    grid-template-columns: 2fr 110px 90px 80px 110px 36px;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+  .item-row:hover { background: var(--cream); }
+
+  .item-name-wrap {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .item-select {
+    font-size: 12px; padding: 6px 10px;
+    border-radius: 6px; background: var(--cream2);
+  }
+  .item-name-input { font-size: 14px; font-weight: 500; padding: 8px 10px; }
+  .item-price-input, .item-qty-input { font-size: 14px; padding: 8px 10px; text-align: right; }
+
+  .per-hour-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .toggle-row { display: flex; align-items: center; gap: 6px; }
+  .toggle-label { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .toggle {
+    position: relative; width: 36px; height: 20px; cursor: pointer;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0;
+    background: var(--border); border-radius: 20px;
+    transition: background 0.2s;
+  }
+  .slider::before {
+    content: ''; position: absolute;
+    width: 14px; height: 14px;
+    left: 3px; top: 3px;
+    background: white; border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  input:checked + .slider { background: var(--gold); }
+  input:checked + .slider::before { transform: translateX(16px); }
+  .hours-input { font-size: 12px; padding: 5px 8px; display: none; }
+  .hours-input.show { display: block; }
+
+  .row-total {
+    font-size: 14px; font-weight: 600;
+    color: var(--dark3);
+    text-align: right;
+    padding-right: 4px;
+  }
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--border); font-size: 18px;
+    width: 32px; height: 32px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .del-btn:hover { background: #FDEAEA; color: var(--red); }
+
+  .add-item-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--cream2);
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 11px 18px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    color: var(--muted);
+    margin-top: 8px;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .add-item-btn:hover { border-color: var(--gold); color: var(--gold); background: #FEF8EE; }
+
+  /* ── TOTALS ── */
+  .totals-grid {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  }
+  .totals-row {
+    display: flex; align-items: center; gap: 12px;
+    min-width: 320px;
+  }
+  .totals-label { font-size: 14px; color: var(--muted); flex: 1; text-align: right; }
+  .totals-value { font-size: 15px; font-weight: 600; width: 120px; text-align: right; }
+  .totals-input { width: 90px; text-align: right; padding: 7px 10px; font-size: 14px; }
+  .totals-row.final { border-top: 2px solid var(--dark); padding-top: 12px; margin-top: 4px; }
+  .totals-row.final .totals-label { font-size: 16px; font-weight: 700; color: var(--dark); }
+  .totals-row.final .totals-value { font-size: 20px; font-weight: 700; color: var(--dark3); }
+
+  /* Discount type toggle */
+  .discount-type-toggle {
+    display: flex; gap: 4px; background: var(--cream2); border-radius: 8px; padding: 3px;
+  }
+  .discount-type-toggle button {
+    border: none; background: transparent; padding: 5px 14px;
+    border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; color: var(--muted); transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .discount-type-toggle button.active {
+    background: var(--white); color: var(--dark); box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+
+  /* ── ACTION BAR ── */
+  .action-bar {
+    display: flex; gap: 12px; justify-content: flex-end;
+    padding: 20px 0 0 0;
+    border-top: 2px solid var(--cream2);
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 26px;
+    border-radius: 9px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 2px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold), #B8832A);
+    color: var(--dark);
+    box-shadow: 0 4px 14px rgba(201,150,58,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,150,58,0.45); }
+  .btn-dark {
+    background: var(--dark);
+    color: var(--white);
+  }
+  .btn-dark:hover { background: var(--dark3); }
+
+  /* ── PRICE LIST PAGE ── */
+  .pricelist-layout {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+  .pricelist-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .pricelist-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px; color: var(--dark);
+  }
+  .pricelist-title span { color: var(--gold); }
+
+  /* ── ADD ITEM FORM ── */
+  .add-item-form {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
+  .add-item-form .aif-title {
+    font-size: 12px; font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .add-item-form .aif-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1.2fr auto;
+    gap: 10px; align-items: end;
+  }
+  .add-item-form .form-group { margin: 0; }
+  .add-item-form label { font-size: 11px; }
+  .add-item-form input, .add-item-form select {
+    padding: 9px 12px; font-size: 14px;
+  }
+
+  .cat-block { margin-bottom: 28px; }
+  .cat-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin-bottom: 10px;
+    padding-left: 4px;
+  }
+  .pl-item-row {
+    display: grid;
+    grid-template-columns: 1.6fr 1.1fr 110px 80px 36px;
+    gap: 8px; align-items: center;
+    padding: 7px 10px;
+    background: var(--white);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    border: 1px solid var(--border);
+  }
+  .pl-item-row input, .pl-item-row select { background: transparent; border: 1px solid transparent; padding: 6px 8px; font-size: 14px; }
+  .pl-item-row input:focus, .pl-item-row select:focus { background: var(--cream); border-color: var(--border); }
+  .pl-item-row select { font-size: 12px; color: var(--muted); }
+  .pl-note { font-size: 12px; color: var(--muted); font-style: italic; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--dark);
+    color: white;
+    padding: 13px 22px;
+    border-radius: 10px;
+    font-size: 14px; font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 9999;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.gold { background: var(--gold); color: var(--dark); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .items-header { display: none; }
+    .item-row {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto;
+    }
+    .nav-tabs { gap: 2px; }
+    .nav-tab { padding: 8px 12px; font-size: 13px; }
+    .totals-row { min-width: unset; width: 100%; }
+    .form-group.wide { grid-column: span 1; }
+    .add-item-form .aif-grid { grid-template-columns: 1fr; }
+    .pl-item-row { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-logo">D</div>
+    <div class="nav-title">Dera Banquet Hall <span>· Quotes</span></div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('quote', event)">📋 New Quote</button>
+    <button class="nav-tab" onclick="showPage('pricelist', event)">💰 Price List</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════ QUOTE PAGE -->
+<div id="page-quote" class="page active">
+<div class="quote-layout">
+
+  <!-- Quote Meta -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">🏷️</div>
+      <div class="card-title">Quote Details</div>
+      <div class="card-subtitle" id="auto-save-badge">Auto-saved ✓</div>
+    </div>
+    <div class="quote-meta-row">
+      <div class="form-group">
+        <label>Quote #</label>
+        <input type="text" id="q-number" placeholder="Enter Quote Number" oninput="autoSave()">
+      </div>
+      <div class="form-group">
+        <label>Quote Date</label>
+        <input type="date" id="q-date" oninput="autoSave()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Client Info -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">👤</div>
+      <div class="card-title">Client Information</div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group wide">
+        <label>Client / Company Name</label>
+        <input type="text" id="c-name" placeholder="Full name or company" oninput="autoSave()">
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="c-phone" placeholder="(204) 000-0000" oninput="autoSave()">
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="c-email" placeholder="client@email.com" oninput="autoSave()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Info -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">🎉</div>
+      <div class="card-title">Event Details</div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Event Type</label>
+        <input type="text" id="e-type" placeholder="Wedding, Concert, Birthday…" oninput="autoSave()">
+      </div>
+      <div class="form-group">
+        <label>Event Date</label>
+        <input type="date" id="e-date" oninput="autoSave()">
+      </div>
+      <div class="form-group">
+        <label>⏰ Access / Setup Time</label>
+        <input type="time" id="e-access" oninput="autoSave()">
+      </div>
+      <div class="form-group">
+        <label>🔻 Tear Down Time</label>
+        <input type="time" id="e-teardown" oninput="autoSave()">
+      </div>
+      <div class="form-group">
+        <label>Guest Count</label>
+        <input type="number" id="e-guests" placeholder="0" min="0" oninput="autoSave()">
+      </div>
+      <div class="form-group">
+        <label>Hall Name</label>
+        <input type="text" id="e-hall" placeholder="Dera Hall, Grand Hall, Manor Hall…" oninput="autoSave()">
+      </div>
+      <div class="form-group wide">
+        <label>Notes / Special Requests</label>
+        <input type="text" id="e-notes" placeholder="Any special requirements…" oninput="autoSave()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">📦</div>
+      <div class="card-title">Line Items</div>
+    </div>
+    <div class="items-header">
+      <span>Item</span>
+      <span>Unit Price</span>
+      <span>Qty</span>
+      <span>Per Hour?</span>
+      <span style="text-align:right">Row Total</span>
+      <span></span>
+    </div>
+    <div id="items-container"></div>
+    <button class="add-item-btn" onclick="addItemRow()">＋ Add Item</button>
+  </div>
+
+ <!-- Totals -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-icon">🧮</div>
+    <div class="card-title">Totals & Payment Schedule</div>
+  </div>
+  <div class="totals-grid">
+    <div class="totals-row">
+      <div class="totals-label">Subtotal</div>
+      <div class="totals-value" id="t-subtotal">$0.00</div>
+    </div>
+    <div class="totals-row">
+      <div class="totals-label">Discount</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" class="totals-input" id="t-discount" value="0" min="0" step="0.01" oninput="recalcTotals(); autoSave()">
+        <div class="discount-type-toggle">
+          <button id="discount-type-amount" class="active" onclick="setDiscountType('amount')">$</button>
+          <button id="discount-type-percent" onclick="setDiscountType('percent')">%</button>
+        </div>
+      </div>
+      <div class="totals-value" id="t-discount-val" style="color:var(--red)">–$0.00</div>
+    </div>
+    <!-- After Discount row - only shown when discount > 0 -->
+    <div class="totals-row" id="after-discount-row" style="display:none;">
+      <div class="totals-label">After Discount</div>
+      <div class="totals-value" id="t-after-discount">$0.00</div>
+    </div>
+    <div class="totals-row">
+      <div class="totals-label">Tax / GST (%)</div>
+      <input type="number" class="totals-input" id="t-tax" value="0" min="0" max="100" oninput="recalcTotals(); autoSave()">
+      <div class="totals-value" id="t-tax-val">+$0.00</div>
+    </div>
+    <div class="totals-row">
+      <div class="totals-label">Security Deposit (refundable)</div>
+      <input type="number" class="totals-input" id="t-deposit" value="2000" min="0" oninput="recalcTotals(); autoSave()">
+      <div class="totals-value" id="t-deposit-val">$2,000.00</div>
+    </div>
+    <div class="totals-row">
+      <div class="totals-label">Initial Deposit</div>
+      <input type="number" class="totals-input" id="t-initial" value="2000" min="0" step="100" oninput="recalcTotals(); autoSave()">
+      <div class="totals-value" id="t-initial-val">$2,000.00</div>
+    </div>
+    <div class="totals-row final">
+      <div class="totals-label">TOTAL AMOUNT DUE</div>
+      <div class="totals-value" id="t-total">$0.00</div>
+    </div>
+  </div>
+
+  <!-- Payment Due Dates -->
+  <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+      <div style="background: var(--cream); padding: 8px 15px; border-radius: 8px; flex: 1;">
+        <div style="font-size: 11px; color: var(--muted); text-transform: uppercase;">Initial Deposit Due</div>
+        <div style="font-size: 15px; font-weight: 700; color: var(--dark);" id="initial-due-date">—</div>
+      </div>
+      <div style="background: var(--cream); padding: 8px 15px; border-radius: 8px; flex: 1;">
+        <div style="font-size: 11px; color: var(--muted); text-transform: uppercase;">Remaining Balance Due</div>
+        <div style="font-size: 15px; font-weight: 700; color: var(--dark);" id="balance-due-date">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Actions -->
+  <div class="card">
+    <div class="action-bar">
+      <button class="btn btn-outline" onclick="clearQuote()">🗑 Clear Quote</button>
+      <button class="btn btn-dark" onclick="saveQuote()">💾 Save Quote</button>
+      <button class="btn btn-primary" onclick="generatePDF()">📄 Download PDF</button>
+      <button class="btn btn-dark" onclick="uploadToDrive()" id="drive-btn">☁️ Upload to Drive</button>
+      <button class="btn btn-primary" onclick="sendEmailToClient()" id="email-btn";">📧 Send to Client</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════ PRICE LIST PAGE -->
+<div id="page-pricelist" class="page">
+<div class="pricelist-layout">
+  <div class="pricelist-header">
+    <div>
+      <div class="pricelist-title">Price <span>List</span></div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Add items to any category, or move items between categories</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="savePriceList()">💾 Save Changes</button>
+    </div>
+  </div>
+
+  <!-- ADD NEW ITEM FORM -->
+  <div class="add-item-form">
+    <div class="aif-title">＋ Add New Item</div>
+    <div class="aif-grid">
+      <div class="form-group">
+        <label>Item Name</label>
+        <input type="text" id="new-item-name" placeholder="e.g. Extra Microphone">
+      </div>
+      <div class="form-group">
+        <label>Price ($)</label>
+        <input type="number" id="new-item-price" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Note (optional)</label>
+        <input type="text" id="new-item-note" placeholder="per chair, per hour…">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="new-item-cat" list="category-list" placeholder="Pick or type new…">
+        <datalist id="category-list"></datalist>
+      </div>
+      <button class="btn btn-dark" style="padding:9px 18px;font-size:14px" onclick="addNewItemToCategory()">Add</button>
+    </div>
+  </div>
+
+  <div id="pricelist-container"></div>
+</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+<!-- Custom Success Modal -->
+<div id="custom-modal" style="display:none; position:fixed; inset:0; background:rgba(26,26,46,0.7); z-index:9999; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+  <div style="background:var(--white); border-radius:16px; padding:32px; max-width:450px; width:90%; box-shadow:var(--shadow-lg); text-align:center; transform:scale(0.9); transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1);" id="modal-content">
+    <div style="width:64px; height:64px; background:linear-gradient(135deg, var(--green), #1E5A39); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; font-size:32px; color:white; box-shadow:0 8px 24px rgba(46,125,82,0.3);">
+      ✓
+    </div>
+    <h2 style="font-family:'Playfair Display', serif; font-size:22px; color:var(--dark); margin-bottom:12px;" id="modal-title">Success!</h2>
+    <p style="font-size:14px; color:var(--muted); margin-bottom:24px;" id="modal-message">Action completed successfully.</p>
+    
+    <div id="modal-link-container" style="display:none; background:var(--cream); padding:12px; border-radius:8px; border:1px solid var(--border); margin-bottom:24px;">
+      <a id="modal-link" href="#" target="_blank" style="font-size:13px; color:var(--gold); word-break:break-all; text-decoration:none; font-weight:600;">View PDF Link</a>
+    </div>
+
+    <button class="btn btn-primary" onclick="closeModal()" style="width:100%; justify-content:center;">Continue</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DEFAULT PRICE LIST
+// ═══════════════════════════════════════════════════════
+const DEFAULT_ITEMS = [
+  { cat:'Hall Rental', name:'Dera hall – 6 Hours', price:8000, note:'' },
+  { cat:'Hall Rental', name:'Dera Grand Hall – 6 Hours', price:12000, note:'' },
+  { cat:'Hall Rental', name:'Dera Manor Hall – 6 hours', price:3000, note:'' },
+  { cat:'Hall Rental', name:'Additional setup time', price:250, note:'' },
+  { cat:'Hall Rental', name:'Overtime Event Extension Fee', price:500, note:'' },
+  { cat:'Hall Equipment', name:'Bar', price:250, note:'' },
+  { cat:'Hall Equipment', name:'Basic Sound System', price:500, note:'' },
+  { cat:'Hall Equipment', name:'Black Chairs', price:2, note:'' },
+  { cat:'Hall Equipment', name:'Dining Service', price:450, note:'' },
+  { cat:'Hall Equipment', name:'Rectangular Tables', price:7, note:'' },
+  { cat:'Hall Equipment', name:'Round Tables', price:14, note:'' },
+  { cat:'Hall Equipment', name:'Standard Size Stage', price:250, note:'' },
+  { cat:'Hall Equipment', name:'TVs', price:250, note:'' },
+  { cat:'Cleaning', name:'Dera Cleaning Fee', price:500, note:'' },
+  { cat:'Cleaning', name:'Dera Grand Cleaning Fee', price:1000, note:'' },
+  {cat:'Cleaning', name:'Dera Manor Cleaning Fee', price:400, note:'' },
+  { cat:'Furniture', name:'Rose Gold Chair (Gold)', price:5, note:'per chair' },
+  { cat:'Furniture', name:'S-Shape Table', price:25, note:'per table' },
+  { cat:'Furniture', name:'Round Glass Gold Cake Table', price:20, note:'per table' },
+  { cat:'Furniture', name:'Lounge Sofa Set (2 seat + 1 seat)', price:150, note:'per set' },
+  { cat:'Furniture', name:'Banquet Chairs', price:4, note:'per Chair' },
+  { cat:'Furniture', name:'Bar Chairs', price:10, note:'per Chair' },
+  { cat:'Furniture', name:'cocktail Tables', price:10, note:'per Table' },
+  { cat:'Décor', name:'Table Lenins', price:10, note:'Per piece' },
+  { cat:'Décor', name:'Table Napkins', price:1, note:'Per piece' },
+  { cat:'Décor', name:'Flower Centerpiece', price:10, note:'per table' },
+  { cat:'Décor', name:'Lamp Centerpiece', price:10, note:'per table' },
+  { cat:'Décor', name:'Red Carpet(Entrance)', price:100, note:'' },
+  { cat:'Décor', name:'Stanchions with Rope', price:20, note:'per pair with Rope' },
+  { cat:'Décor', name:'Flag Poles', price:20, note:'per piece' },
+  { cat:'Décor', name:'Golden Decorative Arches', price:50, note:'per piece' },
+  { cat:'Décor', name:'Ceiling Drapery (per 10 sqm)', price:120, note:'10 sqm' },
+  { cat:'Décor', name:'Stage Skirt', price:80, note:'' },
+  { cat:'Décor', name:'Table Numbers', price:1, note:'' },
+  { cat:'Décor', name:'Artificial Trees', price:60, note:'' },
+  { cat:'Games', name:'Table Tennis Table', price:80, note:'per day' },
+  { cat:'Games', name:'Foosball Table', price:70, note:'per day' },
+  { cat:'LED Screens', name:'LED Screen P2.6 – 9ft × 16.5ft', price:2000, note:'' },
+  { cat:'LED Screens', name:'LED Screen P3.9 – 9ft x 26 ft', price:3000, note:'' },
+  { cat:'LED Screens', name:'Single Standing LED 65"', price:250, note:'per unit' },
+  { cat:'Lighting', name:'Stage Lights', price:800, note:'without operator' },
+  { cat:'Stage', name:'Stage 8 x4 ft', price:150, note:'Per piece' },
+  { cat:'Stage', name:'Stage hight adjustment fee', price:600, note:'Per piece' },
+  { cat:'DJ & Tech', name:'DJ Basic – 4 hours', price:400, note:'' },
+  { cat:'DJ & Tech', name:'DJ Premium – 6 hours', price:600, note:'' },
+  { cat:'DJ & Tech', name:'DJ Platinum – 8 hours', price:800, note:'' },
+  { cat:'DJ & Tech', name:'DJ Overtime (per hour)', price:100, note:'per hour' },
+  { cat:'DJ & Tech', name:'Sound Technician', price:60, note:'per hour' },
+  { cat:'DJ & Tech', name:'Lighting Technician', price:60, note:'per hour' },
+  { cat:'DJ & Tech', name:'LED Screen Operator', price:70, note:'per hour' },
+  { cat:'DJ & Tech', name:'Setlist Planning', price:100, note:'' },
+  { cat:'Staff', name:'Servers', price:25, note:'per hr/person' },
+  { cat:'Staff', name:'Security', price:30, note:'per hr/person' },
+  { cat:'Deposit', name:'Refundable Damage Deposit', price:2000, note:'refundable' }
+];
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let priceList = [];
+let itemRowId = 0;
+let discountType = 'amount'; // 'amount' or 'percent'
+
+function getPriceList() {
+  try {
+    const saved = localStorage.getItem('dera_pricelist');
+    return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+  } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_ITEMS)); }
+}
+
+function fmt(n) {
+  return '$' + Number(n||0).toLocaleString('en-CA', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function parseNum(v) { return parseFloat(v)||0; }
+
+// ═══════════════════════════════════════════════════════
+// DISCOUNT TYPE TOGGLE
+// ═══════════════════════════════════════════════════════
+function setDiscountType(type) {
+  discountType = type;
+  document.getElementById('discount-type-amount').classList.toggle('active', type === 'amount');
+  document.getElementById('discount-type-percent').classList.toggle('active', type === 'percent');
+  // Reset discount input to 0 when switching
+  document.getElementById('t-discount').value = 0;
+  recalcTotals();
+  autoSave();
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function showPage(p, evt) {
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  if (evt) evt.target.classList.add('active');
+  if (p === 'pricelist') renderPriceList();
+}
+
+// ═══════════════════════════════════════════════════════
+// ITEMS
+// ═══════════════════════════════════════════════════════
+function addItemRow(data) {
+  priceList = getPriceList();
+  const id = itemRowId++;
+  const container = document.getElementById('items-container');
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.dataset.id = id;
+  if (data?.category) div.dataset.category = data.category;
+
+  // Build dropdown options
+  let opts = '<option value="">— Custom Item —</option>';
+  const cats = [...new Set(priceList.map(i=>i.cat))];
+  cats.forEach(cat => {
+    opts += `<optgroup label="${escHtml(cat)}">`;
+    priceList.filter(i=>i.cat===cat).forEach(i => {
+      opts += `<option value="${escHtml(i.name)}" data-price="${i.price}" data-cat="${escHtml(i.cat)}">${escHtml(i.name)}</option>`;
+    });
+    opts += '</optgroup>';
+  });
+
+  div.innerHTML = `
+    <div class="item-name-wrap">
+      <select class="item-select" onchange="onSelectItem(${id}, this)">
+        ${opts}
+      </select>
+      <input class="item-name-input" type="text" placeholder="Item name…"
+        value="${escHtml(data?.name||'')}"
+        oninput="updateRowTotal(${id}); autoSave()">
+    </div>
+    <input class="item-price-input" type="number" min="0" step="0.01"
+      placeholder="0.00" value="${data?.price||''}"
+      oninput="updateRowTotal(${id}); autoSave()">
+    <input class="item-qty-input" type="number" min="0" step="1"
+      placeholder="1" value="${data?.qty||1}"
+      oninput="updateRowTotal(${id}); autoSave()">
+    <div class="per-hour-wrap">
+      <div class="toggle-row">
+        <label class="toggle">
+          <input type="checkbox" ${data?.perHour?'checked':''} onchange="toggleHours(${id},this)">
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">hrs</span>
+      </div>
+      <input type="number" class="hours-input ${data?.perHour?'show':''}"
+        min="1" step="0.5" placeholder="hrs" value="${data?.hours||''}"
+        oninput="updateRowTotal(${id}); autoSave()">
+    </div>
+    <div class="row-total" id="rt-${id}">$0.00</div>
+    <button class="del-btn" onclick="removeItemRow(${id})" title="Remove">✕</button>
+  `;
+  container.appendChild(div);
+
+  // Set dropdown to match saved name
+  if (data?.name) {
+    const sel = div.querySelector('select');
+    const matching = [...sel.options].find(o => o.value === data.name);
+    if (matching) matching.selected = true;
+  }
+
+  updateRowTotal(id);
+}
+
+function onSelectItem(id, sel) {
+  const row = document.querySelector(`.item-row[data-id="${id}"]`);
+  const nameInput = row.querySelector('.item-name-input');
+  const priceInput = row.querySelector('.item-price-input');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt.dataset.price !== undefined && opt.value) {
+    nameInput.value = opt.value;
+    priceInput.value = opt.dataset.price;
+    if (opt.dataset.cat) row.dataset.category = opt.dataset.cat;
+  } else {
+    nameInput.value = '';
+    priceInput.value = '';
+    row.dataset.category = '';
+  }
+  updateRowTotal(id);
+  autoSave();
+}
+
+function toggleHours(id, cb) {
+  const row = document.querySelector(`.item-row[data-id="${id}"]`);
+  const hi = row.querySelector('.hours-input');
+  hi.classList.toggle('show', cb.checked);
+  updateRowTotal(id);
+  autoSave();
+}
+
+function updateRowTotal(id) {
+  const row = document.querySelector(`.item-row[data-id="${id}"]`);
+  if (!row) return;
+  const price = parseNum(row.querySelector('.item-price-input').value);
+  const qty   = parseNum(row.querySelector('.item-qty-input').value) || 1;
+  const perHour = row.querySelector('input[type=checkbox]').checked;
+  const hours = perHour ? (parseNum(row.querySelector('.hours-input').value)||1) : 1;
+  const total = price * qty * hours;
+  document.getElementById('rt-'+id).textContent = fmt(total);
+  recalcTotals();
+}
+
+function removeItemRow(id) {
+  const row = document.querySelector(`.item-row[data-id="${id}"]`);
+  if (row) row.remove();
+  recalcTotals();
+  autoSave();
+}
+
+function getRowData(row) {
+  const id = row.dataset.id;
+  const price = parseNum(row.querySelector('.item-price-input').value);
+  const qty   = parseNum(row.querySelector('.item-qty-input').value)||1;
+  const perHour = row.querySelector('input[type=checkbox]').checked;
+  const hours = perHour ? (parseNum(row.querySelector('.hours-input').value)||1) : 1;
+  const name = row.querySelector('.item-name-input').value;
+  let category = row.dataset.category || '';
+  if (!category) {
+    const match = getPriceList().find(p => p.name === name);
+    category = match ? match.cat : '';
+  }
+  if (category) row.dataset.category = category;
+  return {
+    name, category, price, qty, perHour, hours,
+    total: price * qty * hours
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// TOTALS (updated for discount type + conditional after-discount row)
+// ═══════════════════════════════════════════════════════
+function recalcTotals() {
+  const rows = document.querySelectorAll('#items-container .item-row');
+  let sub = 0;
+  rows.forEach(row => {
+    const d = getRowData(row);
+    sub += d.total;
+  });
+
+  const discInput = parseNum(document.getElementById('t-discount').value);
+  const tax  = parseNum(document.getElementById('t-tax').value);
+  const dep  = parseNum(document.getElementById('t-deposit').value);
+  const init = parseNum(document.getElementById('t-initial').value);
+
+  // Calculate discount amount based on type
+  let discAmt = 0;
+  if (discountType === 'amount') {
+    discAmt = Math.min(Math.max(discInput, 0), sub);
+  } else {
+    // percent
+    const pct = Math.min(Math.max(discInput, 0), 100);
+    discAmt = sub * (pct / 100);
+  }
+
+  const afterDiscount = sub - discAmt;
+  const taxAmt = afterDiscount * (tax/100);
+  const totalDue = afterDiscount + taxAmt + dep;
+
+  // Update values
+  document.getElementById('t-subtotal').textContent = fmt(sub);
+  document.getElementById('t-discount-val').textContent = '–' + fmt(discAmt);
+  document.getElementById('t-tax-val').textContent = '+' + fmt(taxAmt);
+  document.getElementById('t-deposit-val').textContent = fmt(dep);
+  document.getElementById('t-initial-val').textContent = fmt(init);
+  document.getElementById('t-total').textContent = fmt(totalDue);
+
+  // Show/hide after-discount row
+  const afterDiscountRow = document.getElementById('after-discount-row');
+  if (discAmt > 0) {
+    afterDiscountRow.style.display = 'flex';
+    document.getElementById('t-after-discount').textContent = fmt(afterDiscount);
+  } else {
+    afterDiscountRow.style.display = 'none';
+  }
+
+  // Also update the discount input label to show % or $
+  const discInputEl = document.getElementById('t-discount');
+  if (discountType === 'percent') {
+    discInputEl.placeholder = '%';
+    discInputEl.max = 100;
+  } else {
+    discInputEl.placeholder = '$';
+    discInputEl.max = '';
+  }
+
+  updateDueDates();
+}
+
+
+//Due Dates
+function updateDueDates() {
+  const quoteDateInput = document.getElementById('q-date').value;
+  let quoteDate = quoteDateInput ? new Date(quoteDateInput + 'T00:00:00') : new Date();
+  if (isNaN(quoteDate.getTime())) quoteDate = new Date();
+
+  // Initial deposit due = quote date + 3 days
+  const initialDue = new Date(quoteDate);
+  initialDue.setDate(quoteDate.getDate() + 3);
+  const initialFormatted = initialDue.toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+  document.getElementById('initial-due-date').textContent = initialFormatted;
+
+  const eventDateInput = document.getElementById('e-date').value;
+  if (eventDateInput) {
+    const eventDate = new Date(eventDateInput + 'T00:00:00');
+    if (!isNaN(eventDate.getTime())) {
+      const balanceDue = new Date(eventDate);
+      balanceDue.setDate(eventDate.getDate() - 30);
+      const balanceFormatted = balanceDue.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric'
+      });
+      document.getElementById('balance-due-date').textContent = balanceFormatted;
+    } else {
+      document.getElementById('balance-due-date').textContent = 'Invalid date';
+    }
+  } else {
+    document.getElementById('balance-due-date').textContent = 'Set event date';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// SAVE / LOAD
+// ═══════════════════════════════════════════════════════
+function getQuoteData() {
+  const rows = [];
+  document.querySelectorAll('#items-container .item-row').forEach(row => {
+    rows.push(getRowData(row));
+  });
+  return {
+    qNumber:   document.getElementById('q-number').value,
+    qDate:     document.getElementById('q-date').value,
+    cName:     document.getElementById('c-name').value,
+    cPhone:    document.getElementById('c-phone').value,
+    cEmail:    document.getElementById('c-email').value,
+    eType:     document.getElementById('e-type').value,
+    ehall:     document.getElementById('e-hall').value,
+    eDate:     document.getElementById('e-date').value,
+    eAccess:   document.getElementById('e-access').value,
+    eTeardown: document.getElementById('e-teardown').value,
+    eGuests:   document.getElementById('e-guests').value,
+    eNotes:    document.getElementById('e-notes').value,
+    tDiscount: document.getElementById('t-discount').value,
+    discountType: discountType,
+    tTax:      document.getElementById('t-tax').value,
+    tDeposit:  document.getElementById('t-deposit').value,
+    tInitial:  document.getElementById('t-initial').value,
+    items: rows
+  };
+}
+
+function autoSave() {
+  try {
+    localStorage.setItem('dera_last_quote', JSON.stringify(getQuoteData()));
+    document.getElementById('auto-save-badge').textContent = 'Auto-saved ✓';
+  } catch(e) {}
+}
+
+function saveQuote() {
+  autoSave();
+  toast('Quote saved! ✓', true);
+}
+
+function loadQuote(data) {
+  if (!data) return;
+  setValue('q-number', data.qNumber);
+  setValue('q-date', data.qDate);
+  setValue('c-name', data.cName);
+  setValue('c-phone', data.cPhone);
+  setValue('c-email', data.cEmail);
+  setValue('e-type', data.eType);
+  setValue('e-date', data.eDate);
+  setValue('e-access', data.eAccess);
+  setValue('e-teardown', data.eTeardown);
+  setValue('e-guests', data.eGuests);
+  setValue('e-notes', data.eNotes);
+  setValue('t-discount', data.tDiscount||0);
+  setValue('t-tax', data.tTax||0);
+  setValue('t-deposit', data.tDeposit!==undefined?data.tDeposit:2000);
+  setValue('t-initial', data.tInitial!==undefined?data.tInitial:2000);
+  // Restore discount type
+  if (data.discountType) {
+    discountType = data.discountType;
+    document.getElementById('discount-type-amount').classList.toggle('active', discountType === 'amount');
+    document.getElementById('discount-type-percent').classList.toggle('active', discountType === 'percent');
+  }
+  document.getElementById('items-container').innerHTML = '';
+  (data.items||[]).forEach(item => addItemRow(item));
+  recalcTotals();
+}
+
+function setValue(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val||'';
+}
+
+function clearQuote() {
+  if (!confirm('Clear this quote? This cannot be undone.')) return;
+  document.getElementById('items-container').innerHTML = '';
+  ['q-number','q-date','c-name','c-phone','c-email','e-type','e-date','e-access','e-teardown','e-guests','e-notes'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('t-discount').value = 0;
+  document.getElementById('t-tax').value = 0;
+  document.getElementById('t-deposit').value = 2000;
+  document.getElementById('t-initial').value = 2000;
+  discountType = 'amount';
+  document.getElementById('discount-type-amount').classList.add('active');
+  document.getElementById('discount-type-percent').classList.remove('active');
+  recalcTotals();
+  autoSave();
+  toast('Quote cleared');
+}
+
+// ═══════════════════════════════════════════════════════
+// PRICE LIST
+// ═══════════════════════════════════════════════════════
+let plItems = [];
+
+function renderPriceList() {
+  plItems = getPriceList();
+  const container = document.getElementById('pricelist-container');
+  container.innerHTML = '';
+
+  const cats = [...new Set(plItems.map(i=>i.cat))];
+
+  const dl = document.getElementById('category-list');
+  if (dl) dl.innerHTML = cats.map(c => `<option value="${escHtml(c)}">`).join('');
+
+  cats.forEach(cat => {
+    const div = document.createElement('div');
+    div.className = 'cat-block';
+    div.innerHTML = `<div class="cat-label">${escHtml(cat)}</div>`;
+
+    const catOptions = cats.map(c =>
+      `<option value="${escHtml(c)}" ${c===cat?'selected':''}>${escHtml(c)}</option>`
+    ).join('') + `<option value="__new__">＋ New category…</option>`;
+
+    plItems.filter(i=>i.cat===cat).forEach(item => {
+      const globalIdx = plItems.indexOf(item);
+      const row = document.createElement('div');
+      row.className = 'pl-item-row';
+      row.innerHTML = `
+        <input type="text" value="${escHtml(item.name)}" placeholder="Item name"
+          onchange="plItems[${globalIdx}].name=this.value">
+        <select onchange="moveItemToCategory(${globalIdx}, this)">
+          ${catOptions}
+        </select>
+        <input type="number" value="${item.price}" min="0" step="0.01" style="text-align:right"
+          onchange="plItems[${globalIdx}].price=parseFloat(this.value)||0">
+        <span class="pl-note">${escHtml(item.note||'')}</span>
+        <button class="del-btn" onclick="deletePlItem(${globalIdx})" title="Delete">✕</button>
+      `;
+      div.appendChild(row);
+    });
+    container.appendChild(div);
+  });
+}
+
+function moveItemToCategory(idx, sel) {
+  const val = sel.value;
+  if (val === '__new__') {
+    const newCat = prompt('Enter new category name:');
+    if (newCat && newCat.trim()) {
+      plItems[idx].cat = newCat.trim();
+      savePriceListData();
+      renderPriceList();
+      toast('Moved to "' + newCat.trim() + '"');
+    } else {
+      renderPriceList();
+    }
+  } else {
+    plItems[idx].cat = val;
+    savePriceListData();
+    renderPriceList();
+    toast('Moved to "' + val + '"');
+  }
+}
+
+function deletePlItem(idx) {
+  plItems.splice(idx, 1);
+  savePriceListData();
+  renderPriceList();
+}
+
+function addNewItemToCategory() {
+  const name = document.getElementById('new-item-name').value.trim();
+  const price = parseFloat(document.getElementById('new-item-price').value) || 0;
+  const note = document.getElementById('new-item-note').value.trim();
+  const cat = document.getElementById('new-item-cat').value.trim();
+
+  if (!name) { toast('Please enter an item name'); return; }
+  if (!cat) { toast('Please enter or pick a category'); return; }
+
+  plItems.push({ cat, name, price, note });
+  savePriceListData();
+  renderPriceList();
+
+  document.getElementById('new-item-name').value = '';
+  document.getElementById('new-item-price').value = '';
+  document.getElementById('new-item-note').value = '';
+
+  toast('Added to "' + cat + '" ✓', true);
+}
+
+function savePriceList() {
+  savePriceListData();
+  toast('Price list saved! ✓', true);
+}
+
+function savePriceListData() {
+  localStorage.setItem('dera_pricelist', JSON.stringify(plItems));
+}
+
+// ═══════════════════════════════════════════════════════
+// PDF (updated to handle discount type & only show after-discount if applicable)
+// ═══════════════════════════════════════════════════════
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'letter' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const data = getQuoteData();
+
+  const gold = [201,150,58];
+  const dark = [26,26,46];
+  const muted= [120,120,138];
+  const white= [255,255,255];
+  const cream= [250,246,239];
+
+  // ── Header Banner ──
+  doc.setFillColor(...dark);
+  doc.rect(0, 0, W, 38, 'F');
+
+  doc.setFillColor(...gold);
+  doc.rect(0, 38, W, 2, 'F');
+
+  doc.setTextColor(...white);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.text('DERA BANQUET HALL', 16, 16);
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...gold);
+  doc.text('EVENT QUOTATION', 16, 23);
+
+  doc.setTextColor(180,180,200);
+  doc.setFontSize(7.5);
+  doc.text('All prices in CAD  ·  Damage deposit fully refundable (if no damage)', 16, 30);
+
+  if (data.qNumber) {
+    doc.setTextColor(...gold);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text('Quote # ' + data.qNumber, W-16, 16, {align:'right'});
+  }
+  if (data.qDate) {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.setTextColor(180,180,200);
+    doc.text(formatDate(data.qDate), W-16, 23, {align:'right'});
+  }
+
+  let y = 46;
+
+  // ── Two-Column: Client | Event ──
+  const colW = (W - 40) / 2;
+
+  doc.setFillColor(...cream);
+  doc.roundedRect(14, y, colW, 42, 3, 3, 'F');
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(14, y, colW, 42, 3, 3, 'S');
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(7);
+  doc.setTextColor(...gold);
+  doc.text('CLIENT INFORMATION', 20, y+6);
+
+  const clientLines = [
+    ['Name', data.cName || '—'],
+    ['Phone', data.cPhone || '—'],
+    ['Email', data.cEmail || '—'],
+  ];
+  let cy = y + 13;
+  clientLines.forEach(([l,v]) => {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text(l+':', 20, cy);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...dark);
+    doc.text(v, 42, cy);
+    cy += 6;
+  });
+
+  const ex = 14 + colW + 12;
+  doc.setFillColor(...cream);
+  doc.roundedRect(ex, y, colW, 42, 3, 3, 'F');
+  doc.setDrawColor(...gold);
+  doc.roundedRect(ex, y, colW, 42, 3, 3, 'S');
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(7);
+  doc.setTextColor(...gold);
+  doc.text('EVENT DETAILS', ex+6, y+6);
+
+  const eventLines = [
+    ['Type', data.eType || '—'],
+    ['Date', data.eDate ? formatDate(data.eDate) : '—'],
+    ['Access', data.eAccess ? formatTime(data.eAccess) : '—'],
+    ['Tear Down', data.eTeardown ? formatTime(data.eTeardown) : '—'],
+    ['Guests', data.eGuests || '—'],
+    ['Hall Name', data.ehall || '—']
+  ];
+  let ey = y + 13;
+  eventLines.forEach(([l,v]) => {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text(l+':', ex+6, ey);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...dark);
+    doc.text(String(v), ex+32, ey);
+    ey += 5.5;
+  });
+
+  y += 46;
+
+  if (data.eNotes) {
+    doc.setFillColor(240,234,220);
+    doc.rect(14, y, W-28, 8, 'F');
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text('Notes: ' + data.eNotes, 18, y+6);
+    y += 12;
+  } else { y += 4; }
+
+  // ── SEPARATE ITEMS by CATEGORY ──
+  const hallServicesItems = [];
+  const extraServicesItems = [];
+
+  const HALL_CATEGORIES = ['hall rental', 'hall equipment'];
+
+  document.querySelectorAll('#items-container .item-row').forEach(row => {
+    const d = getRowData(row);
+    if (!d.name || (!d.price && d.price !== 0)) return;
+
+    const catLower = (d.category || '').toLowerCase();
+
+    if (HALL_CATEGORIES.includes(catLower)) {
+      hallServicesItems.push(d);
+    } else {
+      if (d.price > 0 || d.qty > 0) {
+        extraServicesItems.push(d);
+      }
+    }
+  });
+
+  let hallPackageTotal = 0;
+  hallServicesItems.forEach(item => { hallPackageTotal += item.total; });
+
+  let extraServicesTotal = 0;
+  extraServicesItems.forEach(item => { extraServicesTotal += item.total; });
+
+  const subTotal = hallPackageTotal + extraServicesTotal;
+  const discInput = parseNum(document.getElementById('t-discount').value);
+  const taxPercent = parseNum(document.getElementById('t-tax').value);
+  const securityDeposit = parseNum(document.getElementById('t-deposit').value);
+  const initialDeposit = parseNum(document.getElementById('t-initial').value);
+  const guestCount = parseNum(document.getElementById('e-guests').value) || 1;
+
+  // Calculate discount based on type
+  let discAmt = 0;
+  if (discountType === 'amount') {
+    discAmt = Math.min(Math.max(discInput, 0), subTotal);
+  } else {
+    const pct = Math.min(Math.max(discInput, 0), 100);
+    discAmt = subTotal * (pct / 100);
+  }
+
+  const afterDiscount = subTotal - discAmt;
+  const taxAmt = afterDiscount * (taxPercent / 100);
+  const totalDue = afterDiscount + taxAmt + securityDeposit;
+
+  // ── SECTION 1: HALL SERVICES PACKAGE ──
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...gold);
+  doc.text('HALL SERVICES PACKAGE', 14, y);
+  y += 6;
+
+  doc.setFillColor(...cream);
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(14, y, W-28, 12, 3, 3, 'FD');
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...dark);
+  doc.text('Hall Package Total:', 20, y+8);
+  doc.setTextColor(...gold);
+  doc.text(fmt(hallPackageTotal), W-20, y+8, {align:'right'});
+  y += 15;
+
+  if (hallServicesItems.length > 0) {
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...muted);
+    doc.text('INCLUDED ITEMS:', 14, y);
+    y += 4;
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...dark);
+
+    let includedY = y;
+    hallServicesItems.forEach((item) => {
+      let qtyText = '';
+      if (item.qty > 1) qtyText = ` (${item.qty})`;
+      if (item.perHour && item.hours) qtyText = ` (${item.qty} × ${item.hours} hrs)`;
+
+      const line = `• ${item.name}${qtyText}`;
+      doc.text(line, 18, includedY);
+      includedY += 4.5;
+    });
+    y = includedY + 3;
+  }
+
+  // ── SECTION 2: EXTRA SERVICES ──
+  if (extraServicesItems.length > 0) {
+    if (y > H - 120) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...gold);
+    doc.text('EXTRA SERVICES', 14, y);
+    y += 5;
+
+    const extraTableRows = [];
+    extraServicesItems.forEach(item => {
+      let qtyLabel = String(item.qty);
+      if (item.perHour && item.hours) {
+        qtyLabel = `${item.qty} × ${item.hours} hrs`;
+      }
+      extraTableRows.push([
+        item.name,
+        fmt(item.price),
+        qtyLabel,
+        fmt(item.total)
+      ]);
+    });
+
+    doc.autoTable({
+      startY: y,
+      head: [['Item / Service', 'Unit Price', 'Qty', 'Amount']],
+      body: extraTableRows,
+      margin: {left:14, right:14},
+      styles: { font:'helvetica', fontSize:7.5, cellPadding:3 },
+      headStyles: {
+        fillColor: dark,
+        textColor: gold,
+        fontStyle: 'bold',
+        fontSize: 7
+      },
+      alternateRowStyles: { fillColor: cream },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { halign:'right', cellWidth: 30 },
+        2: { halign:'center', cellWidth: 28 },
+        3: { halign:'right', cellWidth: 32, fontStyle:'bold' },
+      },
+      theme: 'grid',
+      tableLineColor: [226,217,204],
+      tableLineWidth: 0.3,
+    });
+
+    y = doc.lastAutoTable.finalY + 8;
+  }
+
+  // ── FINANCIAL SUMMARY ──
+  if (y > H - 85) {
+    doc.addPage();
+    y = 20;
+  }
+
+  y += 21;
+
+  // ── PAYMENT SUMMARY ──
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...gold);
+  doc.text('PAYMENT SUMMARY', 14, y);
+  y += 7;
+
+  const leftX = 20;
+  const valueX = 68;
+
+  const summaryItems = [
+    ['Subtotal:', fmt(subTotal)],
+  ];
+
+  // Add discount line if any discount
+  if (discAmt > 0) {
+    summaryItems.push(['Discount:', '- ' + fmt(discAmt)]);
+    summaryItems.push(['After Discount:', fmt(afterDiscount)]);
+  }
+
+  summaryItems.push([`GST/HST (${taxPercent}%):`, taxPercent > 0 ? '+ ' + fmt(taxAmt) : '$0.00']);
+  summaryItems.push(['Security Deposit (Refundable):', fmt(securityDeposit)]);
+
+  let sumY = y;
+  summaryItems.forEach(([label, val]) => {
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...muted);
+    doc.text(label, leftX, sumY);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(...dark);
+    doc.text(val, valueX, sumY);
+    sumY += 5.5;
+  });
+
+  sumY += 1.5;
+  doc.setDrawColor(200, 190, 180);
+  doc.setLineWidth(0.3);
+  doc.line(leftX, sumY, leftX + 90, sumY);
+  sumY += 4;
+
+  doc.setFillColor(...dark);
+  doc.roundedRect(leftX, sumY-2, 95, 11, 2, 2, 'F');
+
+  doc.setTextColor(...gold);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);
+  doc.text('TOTAL DUE:', leftX + 6, sumY + 5);
+
+  doc.setFontSize(10);
+  doc.text(fmt(totalDue), leftX + 52, sumY + 5);
+
+  y = sumY + 16;
+
+  // ── PAYMENT SCHEDULE ──
+  if (y > H - 45) { doc.addPage(); y = 20; }
+
+  doc.setFillColor(...cream);
+  doc.roundedRect(14, y, W-28, 35, 3, 3, 'F');
+  doc.setDrawColor(...gold);
+  doc.roundedRect(14, y, W-28, 35, 3, 3, 'S');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...gold);
+  doc.text('PAYMENT SCHEDULE', 20, y+5);
+
+  const quoteDateStr = document.getElementById('q-date').value;
+  const eventDateElem = document.getElementById('e-date').value;
+
+  let depositDueDate = '3 days from quote date';
+  if (quoteDateStr) {
+    const qDate = new Date(quoteDateStr + 'T00:00:00');
+    if (!isNaN(qDate.getTime())) {
+      const dueDate = new Date(qDate);
+      dueDate.setDate(qDate.getDate() + 3);
+      depositDueDate = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  }
+
+  let balanceDueAmount = totalDue - securityDeposit - initialDeposit;
+  let balanceDueDate = 'Set event date';
+  if (eventDateElem) {
+    const eventDateObj = new Date(eventDateElem + 'T00:00:00');
+    if (!isNaN(eventDateObj.getTime())) {
+      const balanceDueObj = new Date(eventDateObj);
+      balanceDueObj.setDate(eventDateObj.getDate() - 30);
+      balanceDueDate = balanceDueObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  }
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.setTextColor(...dark);
+
+  doc.text('Security Deposit:', 20, y+14);
+  doc.setFont('helvetica','bold');
+  doc.text(fmt(securityDeposit), 55, y+14);
+  doc.setFont('helvetica','normal');
+  doc.text('Due: ' + depositDueDate, 20, y+19);
+
+  doc.text('Initial Deposit:', 20, y+26);
+  doc.setFont('helvetica','bold');
+  doc.text(fmt(initialDeposit), 55, y+26);
+  doc.setFont('helvetica','normal');
+  doc.text('Due: ' + depositDueDate, 20, y+31);
+
+  doc.text('Remaining Balance:', W/2 + 5, y+14);
+  doc.setFont('helvetica','bold');
+  doc.text(fmt(Math.max(0, balanceDueAmount)), W/2 + 50, y+14);
+  doc.setFont('helvetica','normal');
+  doc.text('Due: ' + balanceDueDate, W/2 + 5, y+19);
+
+  y += 40;
+
+  // ── Terms and Signature ──
+  if (y > H - 38) {
+    doc.addPage();
+    y = 20;
+  }
+
+  doc.setDrawColor(...gold);
+  doc.setLineWidth(0.4);
+  doc.line(14, y, W-14, y);
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(...muted);
+  doc.text('Initial deposit & Security deposit required to confirm booking. Damage deposit fully refundable.', 14, y+5);
+
+  const sigY = y + 14;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...dark);
+  doc.text('Client Signature: _________________________________', 14, sigY);
+  doc.text('Authorized By: _________________________________', W/2+4, sigY);
+
+  // Footer
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(180,180,200);
+  doc.setFillColor(...dark);
+  doc.rect(0, H-11, W, 11, 'F');
+  doc.setTextColor(...gold);
+  doc.text('DERA BANQUET HALL', 14, H-4);
+  doc.setTextColor(180,180,200);
+  doc.text('Thank you for choosing us', W/2, H-4, {align:'center'});
+  if (data.qNumber) doc.text('Quote #' + data.qNumber, W-14, H-4, {align:'right'});
+
+   // If called from Drive upload, return the Blob
+  if (window.isDriveUpload) {
+    return doc.output('blob');
+  } else {
+    const fname = `Dera-Quote${data.qNumber?'-'+data.qNumber:''}-${data.cName||'Client'}.pdf`;
+    doc.save(fname.replace(/\s+/g,'-'));
+    toast('PDF downloaded! ✓', true);
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-CA', {year:'numeric',month:'long',day:'numeric'});
+}
+function formatTime(t) {
+  if (!t) return '';
+  const [h,m] = t.split(':');
+  const hr = parseInt(h), mn = m;
+  const ampm = hr >= 12 ? 'PM' : 'AM';
+  const h12 = hr % 12 || 12;
+  return `${h12}:${mn} ${ampm}`;
+}
+let toastTimer;
+function toast(msg, isGold) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isGold ? ' gold' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = 'toast', 2800);
+}
+
+//success modal
+function showSuccessModal(title, message, link = null) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-message').textContent = message;
+  
+  const linkContainer = document.getElementById('modal-link-container');
+  const linkEl = document.getElementById('modal-link');
+  
+  if (link) {
+    linkEl.href = link;
+    linkEl.textContent = '🔗 Click to view uploaded file';
+    linkContainer.style.display = 'block';
+  } else {
+    linkContainer.style.display = 'none';
+  }
+
+  // --- FIX: Reset the button every time the modal opens ---
+  const modalBtn = document.querySelector('#custom-modal .btn-primary');
+  modalBtn.textContent = 'Continue';
+  modalBtn.onclick = closeModal; 
+
+  const modal = document.getElementById('custom-modal');
+  modal.style.display = 'flex';
+  
+  // Tiny animation
+  setTimeout(() => {
+    document.getElementById('modal-content').style.transform = 'scale(1)';
+  }, 10);
+}
+
+function closeModal() {
+  const modal = document.getElementById('custom-modal');
+  const content = document.getElementById('modal-content');
+  
+  if (!modal || !content) return;
+
+  // 1. Animate the modal shrinking
+  content.style.transform = 'scale(0.9)';
+  
+  // 2. Wait for the animation to finish, then hide it
+  setTimeout(() => {
+    modal.style.display = 'none';
+    
+    // 3. Reset the scale so it pops up perfectly next time
+    content.style.transform = 'scale(1)'; 
+    
+    // 4. (Optional safety) Reset the button back to "Continue" just in case
+    const modalBtn = document.querySelector('#custom-modal .btn-primary');
+    if (modalBtn) {
+      modalBtn.textContent = 'Continue';
+      modalBtn.onclick = closeModal;
+    }
+  }, 200);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('q-date').value = today;
+
+  function generateRandomQuoteNumber() {
+    const year = new Date().getFullYear();
+    const random = Math.floor(Math.random() * 9000) + 1000;
+    return `Q-${year}-${random}`;
+  }
+
+  const savedQuote = (() => {
+    try { return JSON.parse(localStorage.getItem('dera_last_quote')); } catch(e) { return null; }
+  })();
+
+  if (savedQuote && (savedQuote.cName || savedQuote.items?.length)) {
+    loadQuote(savedQuote);
+    toast('Last quote restored ✓');
+  } else {
+    document.getElementById('q-number').value = generateRandomQuoteNumber();
+    document.getElementById('t-deposit').value = 2000;
+    document.getElementById('t-initial').value = 2000;
+    recalcTotals();
+  }
+
+  document.getElementById('e-date').addEventListener('input', function() {
+    updateDueDates();
+    autoSave();
+  });
+  document.getElementById('q-date').addEventListener('input', function() {
+    updateDueDates();
+    autoSave();
+  });
+});
+// ==========================================
+// GOOGLE DRIVE & SHEETS INTEGRATION
+// ==========================================
+const CLIENT_ID = '811657801573-6cc0son60e4klo1f4kpp28its0fp8g2s.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/gmail.send';
+const FOLDER_NAME = 'Dera Quotes';
+let cachedFolderId = null;
+let cachedSheetId = null;
+let tokenClient;
+let accessToken = null;
+
+// Initialize Google API
+function initGoogle() {
+  return new Promise((resolve) => {
+    gapi.load('client', async () => {
+      await gapi.client.init({});
+      resolve();
+    });
+  });
+}
+
+// Request Access Token (Remembers for 8 hours)
+function requestToken() {
+  return new Promise((resolve, reject) => {
+    const savedToken = sessionStorage.getItem('gdrive_token');
+    const tokenExpiry = sessionStorage.getItem('gdrive_token_expiry');
+    
+    if (savedToken && tokenExpiry && Date.now() < tokenExpiry) {
+      accessToken = savedToken;
+      resolve();
+      return;
+    }
+
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (resp) => {
+        if (resp.error) reject(resp);
+        accessToken = resp.access_token;
+        sessionStorage.setItem('gdrive_token', accessToken);
+        sessionStorage.setItem('gdrive_token_expiry', Date.now() + (28800 * 1000)); 
+        resolve();
+      },
+    });
+    tokenClient.requestAccessToken();
+  });
+}
+
+// Find or Create the "Dera Quotes" Folder
+async function getOrCreateFolder() {
+  if (cachedFolderId) return cachedFolderId;
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  
+  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false&fields=files(id)`;
+  const searchRes = await fetch(searchUrl, { headers });
+  const searchData = await searchRes.json();
+
+  if (searchData.files && searchData.files.length > 0) {
+    cachedFolderId = searchData.files[0].id;
+    return cachedFolderId;
+  }
+
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  const createData = await createRes.json();
+  cachedFolderId = createData.id;
+  return cachedFolderId;
+}
+
+// Find or Create the "Dera Quote Log" Spreadsheet
+async function getOrCreateSpreadsheet() {
+  if (cachedSheetId) return cachedSheetId;
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  const SHEET_NAME = 'Dera Quote Log';
+
+  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${SHEET_NAME}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false&fields=files(id)`;
+  const searchRes = await fetch(searchUrl, { headers });
+  const searchData = await searchRes.json();
+
+  if (searchData.files && searchData.files.length > 0) {
+    cachedSheetId = searchData.files[0].id;
+    return cachedSheetId;
+  }
+
+  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: SHEET_NAME, mimeType: 'application/vnd.google-apps.spreadsheet' })
+  });
+  const createData = await createRes.json();
+  cachedSheetId = createData.id;
+
+  const headerRow = [
+    'Date Generated', 'Quote #', 'Client Name', 'Phone', 'Email', 
+    'Event Type', 'Event Date', 'Access Time', 'Teardown Time', 'Guest Count', 
+    'Hall Name', 'Notes', 'Subtotal', 'Discount', 'Tax', 
+    'Security Deposit', 'Initial Deposit', 'Total Amount Due', 'PDF Link'
+  ];
+  const sheetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${cachedSheetId}/values/Sheet1!A1:append?valueInputOption=USER_ENTERED`;
+  
+  await fetch(sheetUrl, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [headerRow] })
+  });
+  return cachedSheetId;
+}
+
+// Main Upload & Update Function
+async function uploadToDrive() {
+  const btn = document.getElementById('drive-btn');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '⏳ Processing...';
+  btn.disabled = true;
+
+  try {
+    await initGoogle();
+    await requestToken();
+
+    const folderId = await getOrCreateFolder();
+    const sheetId = await getOrCreateSpreadsheet();
+    
+    // 1. Generate PDF
+    window.isDriveUpload = true;
+    const pdfBlob = generatePDF();
+    window.isDriveUpload = false; 
+
+    const qNum = document.getElementById('q-number').value || 'Draft';
+    const cName = document.getElementById('c-name').value || 'Client';
+    const fileName = `Dera-Quote-${qNum}-${cName}.pdf`;
+
+    // 2. Search Drive for existing file
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${folderId}' in parents and trashed=false&fields=files(id)`;
+    const searchRes = await fetch(searchUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const searchData = await searchRes.json();
+    const existingFileId = (searchData.files && searchData.files.length > 0) ? searchData.files[0].id : null;
+
+    let uploadRes;
+    const metadata = { name: fileName, parents: [folderId], mimeType: 'application/pdf' };
+    
+    // 3. Overwrite PDF if exists, or Upload if new
+    if (existingFileId) {
+      const form = new FormData();
+      form.append('file', pdfBlob);
+      uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=media&fields=id,webViewLink`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: form
+      });
+    } else {
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', pdfBlob);
+      uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: form
+      });
+    }
+
+    if (uploadRes.status === 401) {
+      sessionStorage.removeItem('gdrive_token'); 
+      await requestToken(); 
+      alert('Session expired. Please click Upload again.'); 
+      return; 
+    }
+
+    if (!uploadRes.ok) throw new Error('Drive upload failed');
+    const uploadData = await uploadRes.json();
+    const driveLink = uploadData.webViewLink || `https://drive.google.com/file/d/${existingFileId}/view`;
+
+    showSuccessModal('File Saved!', 'The PDF was successfully saved to Drive.', driveLink);
+    navigator.clipboard.writeText(driveLink).catch(err => console.error(err));
+    
+    // 4. Update Google Sheet (Update row in place, or Append if new)
+    btn.innerHTML = '⏳ Updating Sheet...'; 
+    const today = new Date().toLocaleDateString('en-CA');
+    
+    const sheetRow = [
+      today, 
+      qNum,
+      cName,
+      document.getElementById('c-phone').value,
+      document.getElementById('c-email').value,
+      document.getElementById('e-type').value,
+      document.getElementById('e-date').value,
+      document.getElementById('e-access').value,
+      document.getElementById('e-teardown').value,
+      document.getElementById('e-guests').value,
+      document.getElementById('e-hall').value,
+      document.getElementById('e-notes').value,
+      document.getElementById('t-subtotal').innerText.replace('$', '').replace(',', ''),
+      document.getElementById('t-discount-val').innerText.replace('–$', '').replace('-$', '').replace(',', ''),
+      document.getElementById('t-tax-val').innerText.replace('+$', '').replace(',', ''),
+      document.getElementById('t-deposit-val').innerText.replace('$', '').replace(',', ''),
+      document.getElementById('t-initial-val').innerText.replace('$', '').replace(',', ''),
+      document.getElementById('t-total').innerText.replace('$', '').replace(',', ''),
+      driveLink
+    ];
+
+    // Read existing rows
+    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A2:B`;
+    const readRes = await fetch(readUrl, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const readData = await readRes.json();
+    
+    let rowIndexToUpdate = -1;
+    if (readData.values) {
+      readData.values.forEach((row, index) => {
+        if (row[1] === qNum) {
+          rowIndexToUpdate = index + 2; // +2 because array is 0-indexed and sheet starts at row 2
+        }
+      });
+    }
+
+    // If Quote exists, UPDATE the specific row
+    if (rowIndexToUpdate !== -1) {
+      const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A${rowIndexToUpdate}?valueInputOption=USER_ENTERED`;
+      const updateRes = await fetch(updateUrl, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [sheetRow] })
+      });
+      if (!updateRes.ok) throw new Error('Failed to update existing row in Google Sheet');
+      
+    } else {
+      // If it's a new quote, APPEND a new row
+      const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1!A1:append?valueInputOption=USER_ENTERED`;
+      const sheetRes = await fetch(appendUrl, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [sheetRow] })
+      });
+      if (!sheetRes.ok) throw new Error('Failed to append new row to Google Sheet');
+    }
+
+    // 5. Final Modal update
+    const modalBtn = document.querySelector('#custom-modal .btn-primary');
+    document.getElementById('modal-title').textContent = 'All Updated!';
+    document.getElementById('modal-message').innerHTML = 'The quote was saved in Drive, <br>and the details were updated in Google Sheets.';
+    modalBtn.textContent = 'Awesome!';
+    modalBtn.onclick = function() {
+      closeModal();
+      setTimeout(() => { modalBtn.textContent = 'Continue'; modalBtn.onclick = closeModal; }, 250);
+    };
+
+    toast('Quote updated successfully! ✓', true);
+
+  } catch (error) {
+    console.error(error);
+    alert('Error: ' + (error.message || 'Check console for details.'));
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+
+// ==========================================
+// SEND EMAIL FUNCTION (Gmail API)
+// ==========================================
+async function sendEmailToClient() {
+  const btn = document.getElementById('email-btn');
+  const originalText = btn.innerHTML;
+  const originalBg = btn.style.background;
+  const originalColor = btn.style.color;
+  
+  const clientEmail = document.getElementById('c-email').value.trim();
+  const clientName = document.getElementById('c-name').value.trim() || 'Valued Client';
+  const qNum = document.getElementById('q-number').value || 'Draft';
+  const eventDate = document.getElementById('e-date').value || 'your upcoming event';
+  
+  // 1. Validation Check
+  if (!clientEmail) {
+    alert('Please enter a Client Email Address before sending.');
+    return;
+  }
+
+  btn.innerHTML = '⏳ Sending...';
+  btn.disabled = true;
+
+  try {
+    await initGoogle();
+    await requestToken();
+
+    // 2. Generate the PDF
+    window.isDriveUpload = true;
+    const pdfBlob = generatePDF();
+    window.isDriveUpload = false;
+
+    // Convert Blob to Base64
+    const reader = new FileReader();
+    reader.readAsDataURL(pdfBlob); 
+    
+    reader.onloadend = async function() {
+      const base64data = reader.result.split(',')[1]; 
+      
+      // 3. Construct the Email
+      const boundary = "----=_Part_123456789_987654321";
+      const emailLines = [];
+      
+      emailLines.push(`To: ${clientEmail}`);
+      emailLines.push(`Subject: Your Quote from Dera Banquet Hall - #${qNum}`);
+      emailLines.push('MIME-Version: 1.0');
+      emailLines.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
+      emailLines.push('');
+      
+      emailLines.push(`--${boundary}`);
+      emailLines.push('Content-Type: text/html; charset="UTF-8"');
+      emailLines.push('');
+      emailLines.push(`<p>Dear <b>${clientName}</b>,</p>`);
+      emailLines.push(`<p>Thank you for considering Dera Banquet Hall for your event on <b>${eventDate}</b>.</p>`);
+      emailLines.push(`<p>Please find attached your official quotation (Quote #${qNum}).</p>`);
+      emailLines.push(`<p>We look forward to hosting you!</p>`);
+      // Add the red bold text
+      emailLines.push(`<br><p style="color: red; font-weight: bold; font-size: 14px;">⚠️ Please do not reply to this email. For further inquiries, please contact <a href="mailto:info@derabanquet.com">info@derabanquet.com</a> or call now <a href="tel:5877778000">587-777-8000</a>.</p>`);
+      emailLines.push(`<br><p>Best Regards,</p><p><b>Dera Banquet Hall Team</b></p>`);
+      emailLines.push('');
+      
+      emailLines.push(`--${boundary}`);
+      emailLines.push('Content-Type: application/pdf; name="Dera-Quote.pdf"');
+      emailLines.push('Content-Disposition: attachment; filename="Dera-Quote.pdf"');
+      emailLines.push('Content-Transfer-Encoding: base64');
+      emailLines.push('');
+      emailLines.push(base64data);
+      emailLines.push(`--${boundary}--`);
+
+      const emailString = emailLines.join('\r\n');
+      const base64EncodedEmail = btoa(unescape(encodeURIComponent(emailString)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      // 4. Send via Gmail API
+      const gmailRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          raw: base64EncodedEmail
+        })
+      });
+
+      if (!gmailRes.ok) throw new Error('Failed to send email.');
+      
+      // 5. Success! Change button color to Green
+      showSuccessModal(
+        'Email Sent!', 
+        `The quote has been successfully emailed to ${clientEmail}.`
+      );
+
+      btn.innerHTML = '✅ Sent!';
+      btn.style.background = '#2E7D52'; // Success Green
+      btn.style.color = 'white';
+      btn.style.border = 'none';
+      
+      // Reset the button back to normal after 4 seconds
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = originalBg;
+        btn.style.color = originalColor;
+        btn.disabled = false;
+      }, 4000);
+    };
+
+  } catch (error) {
+    console.error(error);
+    alert('Email failed: ' + (error.message || 'Check console for details.'));
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
